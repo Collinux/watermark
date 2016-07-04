@@ -16,14 +16,13 @@ func main() {
 	args := os.Args[1:]
 	var files []string
 	if len(args) == 0 {
-		log.Print("Enter a picture source, '*' or '.' for all")
-		os.Exit(1)
+		log.Fatal("Enter a picture source, '*' or '.' for all")
 	}
 	if strings.EqualFold(args[0], ".") || strings.EqualFold(args[0], "*") {
 		// Get all files in current directory
 		fileList, err := ioutil.ReadDir(".")
 		for _, f := range fileList {
-			// fmt.Println(f.Name())
+			// if strings.HasSuffix(f.Name().ToLower(), "png") || strings.Contains(f.Name(),
 			files = append(files, f.Name())
 		}
 		if err != nil {
@@ -31,11 +30,11 @@ func main() {
 		}
 	} else {
 		files = []string{args[0]}
-		log.Print("Adding watermark to image " + files[0])
+		log.Print("Adding watermark to image: " + files[0])
 	}
 
 	watermark := Watermark{Position: TOP_RIGHT}
-	watermark.apply(files[0])
+	watermark.Apply(files[0])
 }
 
 // Watermark quadrant position
@@ -58,40 +57,83 @@ type Watermark struct {
 	Source   string // File path of image
 }
 
-func (w *Watermark) apply(file string) error {
-	originalBytes, _ := os.Open(file)
-	originalImage, _ := jpeg.Decode(originalBytes)
-	originalImageConfig, _, err := image.DecodeConfig(originalBytes)
-	if err != nil {
-		log.Fatal(err)
-		log.Fatal("Error getting original image's configuration.")
+func getPosition(position int, widthBounds int, heightBounds int) (int, int) {
+	width, height := 0, 0
+	if position == CENTER {
+		width = widthBounds / 2
+		height = heightBounds / 2
+	} else {
+		width = 0
 	}
+	return width, height
+}
+
+func (w *Watermark) Apply(file string) error {
+	originalBytes, err := os.Open(file)
+	if err != nil {
+		log.Fatal(err.Error() + ". Cannot find file: " + file)
+	}
+	originalImage, _, err := image.Decode(originalBytes)
+	if err != nil {
+		log.Fatal(err.Error() + ". Cannot decode image.")
+	}
+
+	filething, err := os.Open(file)
+	if err != nil {
+		log.Print(err.Error() + ". Cannot find image.")
+	}
+	width, height := getJpgDimensions(filething)
+	log.Print(string(width), string(height))
+	offset := image.Pt(getPosition(CENTER, width, height))
 	bounds := originalImage.Bounds()
 	defer originalBytes.Close()
 
+	// Open the watermark file
 	watermarkBytes, err := os.Open("watermark.png")
 	if err != nil {
-		log.Fatal(err)
-		log.Fatal("Error opening watermark image.")
+		log.Fatal(err.Error() + ". Error opening watermark image.")
 	}
 	watermark, err := png.Decode(watermarkBytes)
 	if err != nil {
-		log.Fatal(err)
-		log.Fatal("Error decoding watermark.")
+		log.Fatal(err.Error() + ". Error decoding watermark.")
 	}
 	defer watermarkBytes.Close()
 
-	offset := image.Pt(originalImageConfig.Width, originalImageConfig.Height)
+	// Apply the watermark on top of the original
 	colorRange := image.NewRGBA(bounds)
 	draw.Draw(colorRange, bounds, originalImage, image.ZP, draw.Src)
 	draw.Draw(colorRange, watermark.Bounds().Add(offset), watermark, image.ZP, draw.Over)
 
+	// Save the new image with "_watermark", not overriding the original file
 	baseName := strings.Split(file, ".")[0]
-	extension := "." + strings.Split(file, ".")[1]
+	extension := ".jpg" //"." + strings.Split(file, ".")[1]
 	newImage, err := os.Create(baseName + "_watermark" + extension)
 	jpeg.Encode(newImage, colorRange, &jpeg.Options{jpeg.DefaultQuality})
 	defer newImage.Close()
-	log.Print("Finished")
 
+	log.Print("Finished")
 	return nil
+}
+
+func getJpgDimensions(file *os.File) (width int, height int) {
+	fi, _ := file.Stat()
+	fileSize := fi.Size()
+
+	position := int64(4)
+	bytes := make([]byte, 4)
+	file.ReadAt(bytes[:2], position)
+	length := int(bytes[0]<<8) + int(bytes[1])
+	for position < fileSize {
+		position += int64(length)
+		file.ReadAt(bytes, position)
+		length = int(bytes[2])<<8 + int(bytes[3])
+		if (bytes[1] == 0xC0 || bytes[1] == 0xC2) && bytes[0] == 0xFF && length > 7 {
+			file.ReadAt(bytes, position+5)
+			width = int(bytes[2])<<8 + int(bytes[3])
+			height = int(bytes[0])<<8 + int(bytes[1])
+			return
+		}
+		position += 2
+	}
+	return 0, 0
 }
