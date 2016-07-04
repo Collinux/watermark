@@ -22,8 +22,11 @@ func main() {
 		// Get all files in current directory
 		fileList, err := ioutil.ReadDir(".")
 		for _, f := range fileList {
-			// if strings.HasSuffix(f.Name().ToLower(), "png") || strings.Contains(f.Name(),
-			files = append(files, f.Name())
+			if strings.HasSuffix(strings.ToLower(f.Name()), "png") ||
+				strings.Contains(strings.ToLower(f.Name()), "jpg") ||
+				strings.Contains(strings.ToLower(f.Name()), "jpeg") {
+				files = append(files, f.Name())
+			}
 		}
 		if err != nil {
 			log.Fatal(err)
@@ -115,7 +118,8 @@ func (w *Watermark) Apply(file string) error {
 	return nil
 }
 
-func getJpgDimensions(file *os.File) (width int, height int) {
+// Credit: http://openmymind.net/Getting-An-Images-Type-And-Size/
+func getDimensions(file *os.File) (width int, height int) {
 	fi, _ := file.Stat()
 	fileSize := fi.Size()
 
