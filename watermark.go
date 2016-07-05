@@ -8,6 +8,7 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"image/draw"
 	"image/jpeg"
@@ -39,12 +40,29 @@ func main() {
 			log.Fatal(err)
 		}
 	} else {
+		// Only ues one image
+		// TODO: support multiple file arguments
 		files = []string{args[0]}
 		log.Print("Adding watermark to image: " + files[0])
 	}
 
-	watermark := Watermark{Position: TOP_RIGHT}
-	watermark.Apply(files[0])
+	// Get position argument (default bottom right)
+	positionArg := args[1]
+	position := BOTTOM_RIGHT
+	log.Println("positionArg: ", positionArg)
+	if strings.EqualFold(positionArg, "center") {
+		position = CENTER
+	} else if strings.EqualFold(positionArg, "top_left") {
+		position = TOP_LEFT
+	} else if strings.EqualFold(positionArg, "top_right") {
+		position = TOP_RIGHT
+	} else if strings.EqualFold(positionArg, "bottom_left") {
+		position = BOTTOM_LEFT
+	}
+	watermark := Watermark{Position: position}
+	for index, _ := range files {
+		watermark.Apply(files[index])
+	}
 }
 
 // Watermark quadrant position
@@ -67,37 +85,37 @@ type Watermark struct {
 	Source   string // File path of image
 }
 
-func getPosition(position int, widthBounds int, heightBounds int) (int, int) {
-	width, height := 0, 0
+func getPosition(position int, widthBounds int, heightBounds int, watermark string) (int, int) {
+	placementWidth, placementHeight := 0, 0 // TOP_LEFT
+	watermarkWidth, watermarkHeight := getImageDimensions(watermark)
 	if position == CENTER {
-		width = widthBounds / 2
-		height = heightBounds / 2
-	} else {
-		width = 0
+		placementWidth = (widthBounds / 2) - (watermarkWidth / 2)
+		placementHeight = (heightBounds / 2) - (watermarkHeight / 2)
+	} else if position == TOP_RIGHT {
+		placementWidth = widthBounds - watermarkWidth
+	} else if position == BOTTOM_LEFT {
+		placementHeight = heightBounds - watermarkHeight
+	} else if position == BOTTOM_RIGHT {
+		placementHeight = heightBounds - watermarkHeight
+		placementWidth = widthBounds - watermarkWidth
 	}
-	return width, height
+	return placementWidth, placementHeight
+}
+
+func getImageDimensions(imagePath string) (int, int) {
+	file, err := os.Open(imagePath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+	}
+
+	image, _, err := image.DecodeConfig(file)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s: %v\n", imagePath, err)
+	}
+	return image.Width, image.Height
 }
 
 func (w *Watermark) Apply(file string) error {
-	originalBytes, err := os.Open(file)
-	if err != nil {
-		log.Fatal(err.Error() + ". Cannot find file: " + file)
-	}
-	originalImage, _, err := image.Decode(originalBytes)
-	if err != nil {
-		log.Fatal(err.Error() + ". Cannot decode image.")
-	}
-
-	filething, err := os.Open(file)
-	if err != nil {
-		log.Print(err.Error() + ". Cannot find image.")
-	}
-	width, height := getJpgDimensions(filething)
-	log.Print(string(width), string(height))
-	offset := image.Pt(getPosition(CENTER, width, height))
-	bounds := originalImage.Bounds()
-	defer originalBytes.Close()
-
 	// Open the watermark file
 	watermarkBytes, err := os.Open("watermark.png")
 	if err != nil {
@@ -108,6 +126,21 @@ func (w *Watermark) Apply(file string) error {
 		log.Fatal(err.Error() + ". Error decoding watermark.")
 	}
 	defer watermarkBytes.Close()
+	// TODO: make sure watermark is not bigger than target file
+
+	// Open the original image
+	originalBytes, err := os.Open(file)
+	if err != nil {
+		log.Fatal(err.Error() + ". Cannot find file: " + file)
+	}
+	originalImage, _, err := image.Decode(originalBytes)
+	if err != nil {
+		log.Fatal(err.Error() + ". Cannot decode image.")
+	}
+	originalWidth, originalHeight := getImageDimensions(file)
+	offset := image.Pt(getPosition(w.Position, originalWidth, originalHeight, "watermark.png"))
+	bounds := originalImage.Bounds()
+	defer originalBytes.Close()
 
 	// Apply the watermark on top of the original
 	colorRange := image.NewRGBA(bounds)
@@ -123,28 +156,4 @@ func (w *Watermark) Apply(file string) error {
 
 	log.Print("Finished")
 	return nil
-}
-
-// Credit: http://openmymind.net/Getting-An-Images-Type-And-Size/
-func getDimensions(file *os.File) (width int, height int) {
-	fi, _ := file.Stat()
-	fileSize := fi.Size()
-
-	position := int64(4)
-	bytes := make([]byte, 4)
-	file.ReadAt(bytes[:2], position)
-	length := int(bytes[0]<<8) + int(bytes[1])
-	for position < fileSize {
-		position += int64(length)
-		file.ReadAt(bytes, position)
-		length = int(bytes[2])<<8 + int(bytes[3])
-		if (bytes[1] == 0xC0 || bytes[1] == 0xC2) && bytes[0] == 0xFF && length > 7 {
-			file.ReadAt(bytes, position+5)
-			width = int(bytes[2])<<8 + int(bytes[3])
-			height = int(bytes[0])<<8 + int(bytes[1])
-			return
-		}
-		position += 2
-	}
-	return 0, 0
 }
