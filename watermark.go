@@ -41,6 +41,9 @@ type Watermark struct {
 	PaddingBottom int
 }
 
+// Gets the position of where the watermark will be applied
+// by looking at watermark.Position, padding, and logo size offset.
+// Return the width, height
 func (w *Watermark) getPosition(targetImage string) (int, int) {
 	widthBounds, heightBounds := getImageDimensions(targetImage)
 	placementWidth, placementHeight := 0, 0 // TOP_LEFT
@@ -59,6 +62,7 @@ func (w *Watermark) getPosition(targetImage string) (int, int) {
 	return placementWidth, placementHeight
 }
 
+// Return the width and height of an image given the absolute path
 func getImageDimensions(imagePath string) (int, int) {
 	file, err := os.Open(imagePath)
 	if err != nil {
@@ -72,6 +76,8 @@ func getImageDimensions(imagePath string) (int, int) {
 	return image.Width, image.Height
 }
 
+// Apply a watermark on a file given the absolute path.
+// Requires watermark.Source specified
 func (w *Watermark) Apply(file string) error {
 	log.Print("Adding watermark to image: " + file)
 

@@ -12,9 +12,10 @@ import (
 	"testing"
 )
 
+// Uses the included test_watermark.png and test_image.jpeg files
 func TestApply(t *testing.T) {
-	watermark := watermark.Watermark{Source: "test_watermark.png"}
-	err := watermark.Apply("test_image.jpeg")
+	logo := watermark.Watermark{Source: "test_watermark.png"}
+	err := logo.Apply("test_image.jpeg")
 	if err != nil {
 		log.Fatal(err.Error() + ". Watermark was not applied.")
 	}
