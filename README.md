@@ -1,5 +1,5 @@
 # GoWatermark
-Go package "Watermark" applies a specified logo in a configurable position and creates a new file from the original.
+Go package "watermark" applies a specified logo in a configurable position and creates a new file from the original.
 
 ## Usage
 #### Standalone Script
