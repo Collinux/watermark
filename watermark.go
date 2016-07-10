@@ -5,7 +5,7 @@
 * License: GPL version 2 or higher http://www.gnu.org/licenses/gpl.html
  */
 
-package main
+package watermark
 
 import (
 	"fmt"
@@ -13,42 +13,10 @@ import (
 	"image/draw"
 	"image/jpeg"
 	"image/png"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
 )
-
-func main() {
-	// Parse arguments
-	args := os.Args[1:]
-	var files []string
-	if len(args) == 0 {
-		log.Fatal("Enter a picture source, '*' or '.' for all")
-	}
-	if strings.EqualFold(args[0], ".") || strings.EqualFold(args[0], "*") {
-		// Get all files in current directory
-		fileList, err := ioutil.ReadDir(".")
-		for _, f := range fileList {
-			if strings.HasSuffix(strings.ToLower(f.Name()), "png") ||
-				strings.Contains(strings.ToLower(f.Name()), "jpg") ||
-				strings.Contains(strings.ToLower(f.Name()), "jpeg") {
-				files = append(files, f.Name())
-			}
-		}
-		if err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		// Add all images listed as arguments
-		files = args
-	}
-
-	watermark := Watermark{Source: "test_watermark.png"}
-	for index, _ := range files {
-		watermark.Apply(files[index])
-	}
-}
 
 // Watermark quadrant position
 const (
