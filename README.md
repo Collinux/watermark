@@ -1,5 +1,5 @@
 # GoWatermark
-Go package "Watermark" applies a specified logo in a configurable position and creates a new file from the original.
+Go package "watermark" applies a specified logo in a configurable position and creates a new file from the original.
 
 ## Usage
 #### Standalone Script
@@ -18,8 +18,8 @@ Go package "Watermark" applies a specified logo in a configurable position and c
 
 ##### Example
 ```
-watermark := Watermark{Source: "~/Pictures/my_logo.png"}
-watermark.Apply("~/Pictures/photo_album/gopherart.jpg")
+logo := watermark.Watermark{Source: "~/Pictures/my_logo.png"}
+logo.Apply("~/Pictures/photo_album/gopherart.jpg")
 ```
 
 Remember to import `"github.com/Collinux/gowatermark"`
