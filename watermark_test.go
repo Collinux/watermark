@@ -1,3 +1,9 @@
+/*
+* watermark_test.go
+* Demo that applies test_watermark.png on top of test_image.jpeg
+* License: GPL version 2 or higher http://www.gnu.org/licenses/gpl.html
+ */
+
 package watermark
 
 import (
