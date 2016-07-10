@@ -9,6 +9,7 @@ package main
 
 import (
 	"fmt"
+	"gopkg.in/yaml.v2"
 	"image"
 	"image/draw"
 	"image/jpeg"
@@ -40,26 +41,11 @@ func main() {
 			log.Fatal(err)
 		}
 	} else {
-		// Only ues one image
-		// TODO: support multiple file arguments
-		files = []string{args[0]}
-		log.Print("Adding watermark to image: " + files[0])
+		// Add all images listed as arguments
+		files = args
 	}
 
-	// Get position argument (default bottom right)
-	positionArg := args[1]
-	position := BOTTOM_RIGHT
-	log.Println("positionArg: ", positionArg)
-	if strings.EqualFold(positionArg, "center") {
-		position = CENTER
-	} else if strings.EqualFold(positionArg, "top_left") {
-		position = TOP_LEFT
-	} else if strings.EqualFold(positionArg, "top_right") {
-		position = TOP_RIGHT
-	} else if strings.EqualFold(positionArg, "bottom_left") {
-		position = BOTTOM_LEFT
-	}
-	watermark := Watermark{Position: position}
+	watermark := getConfig()
 	for index, _ := range files {
 		watermark.Apply(files[index])
 	}
@@ -76,13 +62,28 @@ const (
 
 type Watermark struct {
 	// Margin around the watermark image
-	PaddingTop    int
-	PaddingLeft   int
-	PaddingRight  int
-	PaddingBottom int
+	PaddingTop    int `yaml:"padding_top"`
+	PaddingLeft   int `yaml:"padding_left"`
+	PaddingRight  int `yaml:"padding_right"`
+	PaddingBottom int `yaml:"padding_bottom"`
 
-	Position int    // Placement of watermark image
-	Source   string // File path of image
+	Position int    `yaml:"position"` // Placement of watermark image
+	Source   string `yaml:"source"`   // File path of image
+}
+
+// Parses the yaml file to get the watermark struct
+func getConfig() Watermark {
+	configFile, err := ioutil.ReadFile("watermark.yaml")
+	if err != nil {
+		log.Fatal(err.Error() + ". Unable to find 'watermark.yaml' file.")
+	}
+	var watermarkConf Watermark
+	err = yaml.Unmarshal(configFile, watermarkConf)
+	if err != nil {
+		// log.Fatal(err.Error() + ". Unable to parse config file.")
+		log.Fatal("failed")
+	}
+	return watermarkConf
 }
 
 func getPosition(position int, widthBounds int, heightBounds int, watermark string) (int, int) {
@@ -116,6 +117,8 @@ func getImageDimensions(imagePath string) (int, int) {
 }
 
 func (w *Watermark) Apply(file string) error {
+	log.Print("Adding watermark to image: " + file)
+
 	// Open the watermark file
 	watermarkBytes, err := os.Open("watermark.png")
 	if err != nil {
@@ -154,6 +157,6 @@ func (w *Watermark) Apply(file string) error {
 	jpeg.Encode(newImage, colorRange, &jpeg.Options{jpeg.DefaultQuality})
 	defer newImage.Close()
 
-	log.Print("Finished")
+	log.Print("Successfully applied watermark.")
 	return nil
 }
