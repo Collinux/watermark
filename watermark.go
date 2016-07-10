@@ -1,5 +1,5 @@
 /*
-* GoWatermark.go
+* watermark.go
 * Add a watermark to multiple images and customize the placement.
 * Copyright (C) 2016 Collin Guarino (Collinux) collin.guarino@gmail.com
 * License: GPL version 2 or higher http://www.gnu.org/licenses/gpl.html
@@ -9,7 +9,6 @@ package main
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"image"
 	"image/draw"
 	"image/jpeg"
@@ -45,7 +44,7 @@ func main() {
 		files = args
 	}
 
-	watermark := getConfig()
+	watermark := Watermark{Source: "test_watermark.png"}
 	for index, _ := range files {
 		watermark.Apply(files[index])
 	}
@@ -61,42 +60,31 @@ const (
 )
 
 type Watermark struct {
-	// Margin around the watermark image
-	PaddingTop    int `yaml:"padding_top"`
-	PaddingLeft   int `yaml:"padding_left"`
-	PaddingRight  int `yaml:"padding_right"`
-	PaddingBottom int `yaml:"padding_bottom"`
+	// REQUIRED: File path of watermark png (MUST BE PNG)
+	Source string
 
-	Position int    `yaml:"position"` // Placement of watermark image
-	Source   string `yaml:"source"`   // File path of image
+	// Placement of watermark image (default: bottom right)
+	Position int
+
+	// Margin around the watermark image (all default to 0")
+	PaddingTop    int
+	PaddingLeft   int
+	PaddingRight  int
+	PaddingBottom int
 }
 
-// Parses the yaml file to get the watermark struct
-func getConfig() Watermark {
-	configFile, err := ioutil.ReadFile("watermark.yaml")
-	if err != nil {
-		log.Fatal(err.Error() + ". Unable to find 'watermark.yaml' file.")
-	}
-	var watermarkConf Watermark
-	err = yaml.Unmarshal(configFile, watermarkConf)
-	if err != nil {
-		// log.Fatal(err.Error() + ". Unable to parse config file.")
-		log.Fatal("failed")
-	}
-	return watermarkConf
-}
-
-func getPosition(position int, widthBounds int, heightBounds int, watermark string) (int, int) {
+func (w *Watermark) getPosition(targetImage string) (int, int) {
+	widthBounds, heightBounds := getImageDimensions(targetImage)
 	placementWidth, placementHeight := 0, 0 // TOP_LEFT
-	watermarkWidth, watermarkHeight := getImageDimensions(watermark)
-	if position == CENTER {
+	watermarkWidth, watermarkHeight := getImageDimensions(w.Source)
+	if w.Position == CENTER {
 		placementWidth = (widthBounds / 2) - (watermarkWidth / 2)
 		placementHeight = (heightBounds / 2) - (watermarkHeight / 2)
-	} else if position == TOP_RIGHT {
+	} else if w.Position == TOP_RIGHT {
 		placementWidth = widthBounds - watermarkWidth
-	} else if position == BOTTOM_LEFT {
+	} else if w.Position == BOTTOM_LEFT {
 		placementHeight = heightBounds - watermarkHeight
-	} else if position == BOTTOM_RIGHT {
+	} else if w.Position == BOTTOM_RIGHT {
 		placementHeight = heightBounds - watermarkHeight
 		placementWidth = widthBounds - watermarkWidth
 	}
@@ -120,7 +108,7 @@ func (w *Watermark) Apply(file string) error {
 	log.Print("Adding watermark to image: " + file)
 
 	// Open the watermark file
-	watermarkBytes, err := os.Open("watermark.png")
+	watermarkBytes, err := os.Open(w.Source)
 	if err != nil {
 		log.Fatal(err.Error() + ". Error opening watermark image.")
 	}
@@ -140,8 +128,7 @@ func (w *Watermark) Apply(file string) error {
 	if err != nil {
 		log.Fatal(err.Error() + ". Cannot decode image.")
 	}
-	originalWidth, originalHeight := getImageDimensions(file)
-	offset := image.Pt(getPosition(w.Position, originalWidth, originalHeight, "watermark.png"))
+	offset := image.Pt(w.getPosition(file))
 	bounds := originalImage.Bounds()
 	defer originalBytes.Close()
 
