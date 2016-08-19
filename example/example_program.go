@@ -41,8 +41,8 @@ func main() {
 		}
 	}
 
+	// Only accept jpg or jpeg, must not have "_watemark" already added
 	for _, image := range targetList {
-		// Only accept jpg or jpeg, must not have "_watemark" already added
 		imageRegex := regexp.MustCompile(`.(jpg|jpeg)`)
 		if !imageRegex.MatchString(image) || strings.Contains(image, "_watermark") {
 			continue
@@ -50,6 +50,8 @@ func main() {
 		err := logo.Apply(image)
 		if err != nil {
 			log.Fatal("Failed to apply watermark to image: ", image)
+		} else {
+			log.Print("Successfully applied watermark to image: ", image)
 		}
 	}
 }

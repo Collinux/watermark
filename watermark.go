@@ -27,14 +27,13 @@ const (
 	BOTTOM_RIGHT = 4
 )
 
-type Watermark struct {
-	// REQUIRED: File path of watermark png (MUST BE PNG)
+type Watermark struct { // REQUIRED: File path of watermark png (MUST BE PNG)
 	Source string
 
 	// Placement of watermark image (default: bottom right)
 	Position int
 
-	// Margin around the watermark image (all default to 0")
+	// Margin around the watermark image (all default to 0)
 	PaddingTop    int
 	PaddingLeft   int
 	PaddingRight  int
