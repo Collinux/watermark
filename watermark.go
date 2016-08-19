@@ -79,7 +79,7 @@ func getImageDimensions(imagePath string) (int, int) {
 // Apply a watermark on a file given the absolute path.
 // Requires watermark.Source specified
 func (w *Watermark) Apply(file string) error {
-	log.Print("Adding watermark to image: " + file)
+	// log.Print("Adding watermark to image: " + file)
 
 	// Open the watermark file
 	watermarkBytes, err := os.Open(w.Source)
@@ -118,6 +118,6 @@ func (w *Watermark) Apply(file string) error {
 	jpeg.Encode(newImage, colorRange, &jpeg.Options{jpeg.DefaultQuality})
 	defer newImage.Close()
 
-	log.Print("Successfully applied watermark.")
+	// log.Print("Successfully applied watermark.")
 	return nil
 }
