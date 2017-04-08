@@ -3,7 +3,7 @@
 * Applies the "test_watermark.png" to a specified jpg source
 * License: GPL version 2 or higher http://www.gnu.org/licenses/gpl.html
 *
-* Usage: go run example_program.go test_image.jpeg
+* Usage: go run example_program.go test_image.jpg
 * 		 go run example_program.go .
  */
 
