@@ -8,12 +8,12 @@
 package watermark
 
 import (
+	"errors"
 	"fmt"
 	"image"
 	"image/draw"
 	"image/jpeg"
 	"image/png"
-	"log"
 	"os"
 	"strings"
 )
@@ -67,6 +67,7 @@ func getImageDimensions(imagePath string) (int, int) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 	}
+	defer file.Close()
 
 	image, _, err := image.DecodeConfig(file)
 	if err != nil {
@@ -78,45 +79,41 @@ func getImageDimensions(imagePath string) (int, int) {
 // Apply a watermark on a file given the absolute path.
 // Requires watermark.Source specified
 func (w *Watermark) Apply(file string) error {
-	// log.Print("Adding watermark to image: " + file)
-
 	// Open the watermark file
 	watermarkBytes, err := os.Open(w.Source)
 	if err != nil {
-		log.Fatal(err.Error() + ". Error opening watermark image.")
+		return err
 	}
 	watermark, err := png.Decode(watermarkBytes)
 	if err != nil {
-		log.Fatal(err.Error() + ". Error decoding watermark.")
+		return err
 	}
 	defer watermarkBytes.Close()
-	// TODO: make sure watermark is not bigger than target file
 
 	// Open the original image
 	originalBytes, err := os.Open(file)
 	if err != nil {
-		log.Fatal(err.Error() + ". Cannot find file: " + file)
+		return errors.New(fmt.Sprintf("%s. Cannot find file '%s'", err.Error(), file))
 	}
 	originalImage, _, err := image.Decode(originalBytes)
 	if err != nil {
-		log.Fatal(err.Error() + ". Cannot decode image.")
+		return errors.New(err.Error() + ". Cannot decode image.")
 	}
 	offset := image.Pt(w.getPosition(file))
-	bounds := originalImage.Bounds()
+	originalImageBounds := originalImage.Bounds()
 	defer originalBytes.Close()
 
 	// Apply the watermark on top of the original
-	colorRange := image.NewRGBA(bounds)
-	draw.Draw(colorRange, bounds, originalImage, image.ZP, draw.Src)
+	colorRange := image.NewRGBA(originalImageBounds)
+	draw.Draw(colorRange, originalImageBounds, originalImage, image.ZP, draw.Src)
 	draw.Draw(colorRange, watermark.Bounds().Add(offset), watermark, image.ZP, draw.Over)
 
 	// Save the new image with "_watermark", not overriding the original file
 	baseName := strings.Split(file, ".")[0]
-	extension := ".jpg" //"." + strings.Split(file, ".")[1]
+	extension := ".jpg"
 	newImage, err := os.Create(baseName + "_watermark" + extension)
 	jpeg.Encode(newImage, colorRange, &jpeg.Options{jpeg.DefaultQuality})
 	defer newImage.Close()
 
-	// log.Print("Successfully applied watermark.")
 	return nil
 }
