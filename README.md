@@ -22,9 +22,8 @@ logo.Apply("~/Pictures/gopherart.jpg")
 Remember to import `"github.com/collinux/watermark"`
 
 ## License
-Copyright (C) 2016 Collin Guarino (Collinux)  
+Copyright (C) 2016 Collinux
 GPL version 2 or higher http://www.gnu.org/licenses/gpl.html  
-GoWatermark project maintained by Collin Guarino, collin.guarino@gmail.com
 
 ## Contributing  
 Pull requests happily accepted on GitHub!
